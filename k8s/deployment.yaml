@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: echo-api
+  template:
+    metadata:
+      labels:
+        app: echo-api
+    spec:
+      containers:
+        - name: echo-api
+          image: ghcr.io/chatzimanikas-evaggelos>/echo-api:latest
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          env:
+            - name: WELCOME_MESSAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: echo-api-config
+                  key: WELCOME_MESSAGE
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: echo-api-config
+                  key: NODE_ENV
+            - name: API_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: echo-api-secret
+                  key: API_SECRET_KEY
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
