@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: echo-api
-          image: ghcr.io/chatzimanikas-evaggelos>/echo-api:latest
+          image: ghcr.io/chatzimanikas-evaggelos/echo-api:latest
           ports:
             - containerPort: 3000
           resources:
