@@ -1,110 +1,191 @@
-# Software Engineering in Practice — Assignment 1 (2026)
-## Advanced DevOps: Production-Grade CI/CD, External Configuration, and Orchestration
+# SEIP Assignment 1, 2026
+### Kubernetes Echo API Deployment
+## Prerequisites
 
-| Metadata | Details |
-| :--- | :--- |
-| **Estimated Time to Complete** | 15 hours |
-| **Deadline for Submission** | 3rd June |
-| **Total Points** | 100 Points |
+| Tool | Version tested | Install |
+|------|---------------|---------|
+| Docker Desktop | 4.75+ | https://www.docker.com/products/docker-desktop |
+| kubectl | 1.29+ | bundled with Docker Desktop |
+| Git | any | https://git-scm.com |
 
----
-
-## 🎯 Objective
-
-In this assignment, you will build a complete, automated deployment pipeline for a cloud-native web application. You will containerize the application, automate the delivery via GitHub Actions to the GitHub Container Registry (GHCR), and orchestrate it inside a local Kubernetes (Minikube) cluster. 
-
-This assignment bridges the gap between writing code and shipping it by replicating the industry-standard automation, security, and scalability patterns used in enterprise cloud deployments. In large-scale professional projects, mastering automated CI/CD pipelines and declarative orchestration is what prevents configuration drift, isolates sensitive credentials, and ensures continuous, zero-downtime delivery to production infrastructure.
-
-To align with **12-Factor App** principles, you will completely decouple the application's configuration and sensitive data using Kubernetes **ConfigMaps** and **Secrets**.
+> **Note:** This guide uses the Kubernetes cluster bundled with Docker Desktop. Minikube instructions are included as an alternative below.
 
 ---
 
-## 🛠️ Prerequisites
+## 1: Clone the Repository
 
-Before you begin, ensure you have the following tools installed and configured on your local machine:
-* **Git** & a verified **GitHub Account**
-* **Docker Desktop** / Docker Engine (https://docs.docker.com/desktop/setup/install/windows-install/)
-* **Minikube** & **kubectl** (https://minikube.sigs.k8s.io/docs/start/?arch=%2Fwindows%2Fx86-64%2Fstable%2F.exe+download, https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/)
-
-> 📋 **Note:** You are provided with a Node.js Express application that dynamically alters its behavior based on environment variables. **Do not modify this source code.** Your job is to build the infrastructure that safely injects these variables at runtime.
+```bash
+git clone https://github.com/Chatzimanikas-Evaggelos/seip_assignment_1_2026.git
+cd seip_assignment_1_2026
+```
 
 ---
 
-## 📝 Assignment Tasks
+## 2a: Start the Cluster (Docker Desktop)
 
-### Task 1: Containerization (15 Points) based on material taught in the lab `Introduction to Docker`
-1. **Repository Setup:** Fork this GitHub repository
-2. **Write the Container Blueprint:** Write a production-optimized `Dockerfile` at the root of your repository.
-    * **Base Image:** Use a lightweight base image (e.g., `node:18-alpine`).
-    * **Caching Optimization:** Leverage Docker layer caching correctly by copying dependency files (`package.json`) and executing `npm install` *before* copying the remaining source code.
-    * **Port Documentation:** Document the intended container port by using the `EXPOSE` instruction for port `3000`.
+1. Open **Docker Desktop -> Settings -> Kubernetes**
+2. Toggle **Enable Kubernetes** -> click **Apply & Restart**
+3. Wait for the green Kubernetes indicator in the bottom left corner
+4. Point `kubectl` at the new cluster:
 
-### Task 2: Automated CI/CD via GitHub Actions (25 Points) based on material taught in the lab `Working-with-Git-and-Github`
-Create a workflow that automates the build and publishing pipeline.
-1. Create a workflow file at `.github/workflows/ci-cd.yaml`.
-2. Configure it to trigger **only** on a `push` to the `main` branch.
-3. The workflow pipeline must successfully execute the following steps:
-    * Check out the repository code.
-    * Authenticate securely against the **GitHub Container Registry (GHCR)** using the built-in `${{ secrets.GITHUB_TOKEN }}`.
-    * Build and tag the image as `ghcr.io/<your-github-username>/echo-api:latest`.
-    * Push the final image to GHCR.
-
-### Task 3: Cloud-Native Architecture & Orchestration (40 Points) based on material taught in the lab `DevOps`
-You will now construct the declarative infrastructure manifests required to deploy your application to Minikube. 
-
-Create a directory named `k8s/` in your repository. All manifests must be written such that they can be applied successfully using a single command: `kubectl apply -f k8s/`.
-
-#### 1. External Configuration (`configmap.yaml`)
-Create a Kubernetes ConfigMap that defines the non-sensitive configuration parameters.
-* Set `WELCOME_MESSAGE` to a custom greeting of your choice (e.g., `"Welcome to the Software Engineering in Practice Assignment Cluster!"`).
-* Set `NODE_ENV` to `"production"`.
-
-#### 2. Secret Management (`secret.yaml`)
-Create a Kubernetes Secret component to store sensitive credentials securely.
-* Define a key named `API_SECRET_KEY`.
-* > ⚠️ **Crucial:** The value inside the YAML file must be manually **Base64 encoded**. Ensure you handle hidden newline elements (`\n`) during terminal encoding so the raw string matches perfectly upon container injection.
-
-#### 3. Workload Definition (`deployment.yaml`)
-Create a Deployment manifest that orchestrates your application using the image pulled from GHCR.
-* **Scale:** Set `replicas` to exactly `3`.
-* **Resource Management:** Enforce strict resource constraints. 
-    * *Requests:* `100m CPU / 128Mi RAM`
-    * *Limits:* `250m CPU / 256Mi RAM`
-* **Environment Injection:** Map the variables from your ConfigMap and Secret into the container's environment definitions so `server.js` can read them at boot.
-* **Self-Healing:** Implement a `livenessProbe` and a `readinessProbe` targeted at the `/health` endpoint on port `3000`.
-
-#### 4. Service Networking (`service.yaml`)
-Expose your deployment internally within the cluster control plane.
-* Define a Service of type `ClusterIP`.
-* Map incoming cluster traffic on port `80` to target the container's internal port `3000`.
-
-### Task 4: Validation & Technical Documentation (20 Points) based on material taught in the lab `DevOps`
-1. **Documentation:** Author a comprehensive `README.md` at the root of your repository detailing how to clone, spin up Minikube, apply the manifests sequentially, and interact with the endpoints.
-2. **Port Forwarding:** Use `kubectl port-forward` to map the internal `ClusterIP` service interface to your local machine network loopback.
-3. **AI Usage & Future Engineering Report:** Include a dedicated section in your final report addressing your engineering process, AI interaction, and architectural future outlook. You must explicitly answer:
-    * **AI Integration:** How did you utilize Generative AI tools (e.g., ChatGPT, Claude, GitHub Copilot) to assist you during this assignment? 
-    * **Utility Analysis:** What aspects of the AI assistance did you find most useful (e.g., syntax debugging, understanding Kubernetes manifest structures, explaining Base64 mechanics)?
-    * **Friction Points:** Where did the AI tools fail, provide hallucinated/outdated configurations, or leave you stuck? How did you manually troubleshoot past these dead-ends (e.g., local network routing issues, Minikube VM context errors)?
-    * **Future Architectural Outlook:** If you had an extra week, or were tasked with scaling this pipeline for a real-world enterprise system in the future, what steps would you take next? *(Think about production upgrades like replacing port-forwarding with an Ingress Controller, establishing a true GitOps workflow with ArgoCD, adding Prometheus monitoring, or securing image scanning inside the CI pipeline).*
+```bash
+kubectl config use-context docker-desktop
+kubectl cluster-info   # should print a live https:// URL
+```
 
 ---
 
-## 📥 Deliverables & Submission Guidelines
+## 2b: Start the Cluster (Minikube — alternative)
 
-Submit a single aggregated **PDF document** containing the following evidence to the university portal:
+```bash
+# Install Minikube (Windows, via winget)
+winget install Kubernetes.minikube
 
-1.  **GitHub Repository Link:** Must be public and contain all application code, the GitHub Action workflow file, and the complete `k8s/` directory.
-2.  **CI/CD Proof:** A screenshot of your GitHub Actions dashboard showing a successful build and push pipeline completion.
-3.  **Cluster State Proof:** A terminal screenshot showing the clean output of:
-    * `kubectl get all -n default` *(Must show 3 healthy running pods, the deployment status, and the ClusterIP service)*
-    * `kubectl get configmap,secret`
-4.  **Application Verification Proof:** Screenshots of your browser engine or `curl` terminal responses showing successful data fetching from:
-    * `http://localhost:<port>/` *(Showing your custom ConfigMap greeting)*
-    * `http://localhost:<port>/secure-config` *(Showing status "Authorized" and the masked string suffix of your secret)*
-5. **AI Reflection & Future Outlook:** Your written responses to the questions outlined in **Task 4.3**.
+# Start a single-node cluster
+minikube start --driver=docker
+
+# Verify
+kubectl cluster-info
+```
+
+> All subsequent `kubectl` commands work identically regardless of which option one may have chosen.
 
 ---
 
-## Contact Details
+## 3: Apply the Manifests
 
-If anything in the assignment is unclear or you are stuck and need help moving forward please email me at gtheodorou@aueb.gr
+Apply in dependency order (ConfigMap and Secret must exist before the Deployment tries to reference them):
+
+```bash
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/secret.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+```
+
+Or apply the whole directory at once (kubectl resolves ordering automatically):
+
+```bash
+kubectl apply -f k8s/
+```
+
+Expected output:
+
+```
+configmap/echo-api-config created
+secret/echo-api-secret created
+deployment.apps/echo-api created
+service/echo-api-service created
+```
+
+---
+
+## 4: Verify the Deployment
+
+```bash
+# Watch pods reach Running state (takes ~30 seconds)
+kubectl get pods -w
+
+# Confirm all 3 replicas are ready
+kubectl get deployment echo-api
+
+# Inspect all created resources at once
+kubectl get all
+```
+
+All three pods should show `STATUS: Running` and `READY: 1/1`.
+
+---
+
+## 5: Port Forwarding (Access the API Locally)
+
+The Service is of type `ClusterIP`, meaning it is only reachable inside the cluster. Use `kubectl port-forward` to map it to your local machine:
+
+```bash
+kubectl port-forward service/echo-api-service 8080:80
+```
+
+This maps `localhost:8080` on your machine to port `80` on the `echo-api-service`, which in turn forwards to port `3000` on the pods.
+
+Leave this command running in a dedicated terminal window.
+
+---
+
+## 6: Interact with the Endpoints
+
+With port forwarding active, open a second terminal or your browser:
+
+```bash
+# Health check
+curl http://localhost:8080/health
+
+# Echo endpoint: returns the request body
+curl -X POST http://localhost:8080/echo \
+     -H "Content-Type: application/json" \
+     -d '{"message": "hello"}'
+
+# Root: shows the WELCOME_MESSAGE from the ConfigMap
+curl http://localhost:8080/
+```
+
+Expected responses:
+
+| Endpoint | Method | Expected Response |
+|----------|--------|-------------------|
+| `/health` | GET | `{ "status": "ok" }` |
+| `/` | GET | `{ "message": "Welcome to the Software Engineering in Practice Assignment Cluster!" }` |
+| `/echo` | POST | Mirrors the JSON body that was sent |
+
+---
+
+## 7: Inspect Configuration & Secrets
+
+```bash
+# View the ConfigMap values
+kubectl describe configmap echo-api-config
+
+# View the Secret (keys only, values are base64-encoded)
+kubectl describe secret echo-api-secret
+
+# Decode a secret value
+kubectl get secret echo-api-secret -o jsonpath='{.data.API_SECRET_KEY}' | base64 --decode
+```
+
+---
+
+## 8: Tear Down
+
+```bash
+kubectl delete -f k8s/
+```
+
+---
+
+## Kubernetes Manifest Overview
+
+### `configmap.yaml`
+Stores non-sensitive runtime configuration as key-value pairs injected into the container as environment variables (`WELCOME_MESSAGE`, `NODE_ENV`).
+
+### `secret.yaml`
+Stores the `API_SECRET_KEY` as a Base64-encoded Opaque Secret. Base64 is an encoding, not encryption. In production this would be replaced with a secrets manager (e.g. HashiCorp Vault, AWS Secrets Manager).
+
+### `deployment.yaml`
+Declares a `Deployment` with:
+- **3 replicas** for basic availability
+- **Resource requests & limits** (`100m`/`128Mi` request, `250m`/`256Mi` limit) to prevent noisy-neighbour issues
+- **Liveness probe** on `GET /health`. This restarts the container if it stops responding
+- **Readiness probe** on `GET /health`. This removes the pod from the Service load balancer until it is ready to accept traffic
+
+### `service.yaml`
+Exposes the Deployment internally as a `ClusterIP` Service on port `80`, forwarding to the container's port `3000`. External access is achieved via `kubectl port-forward` (development) or an Ingress Controller (production).
+
+---
+
+## Troubleshooting
+
+| Symptom | Likely Cause | Fix |
+|---------|-------------|-----|
+| `No connection could be made to localhost:8080` | kubectl not connected to a cluster | Run `kubectl config use-context docker-desktop` |
+| Pods stuck in `ImagePullBackOff` | Image not publicly accessible on GHCR | Set package visibility to **Public** in GitHub -> Packages |
+| Pods stuck in `CrashLoopBackOff` | App is crashing on start | Run `kubectl logs <pod-name>` for details |
+| `error: no context exists with the name: docker-desktop` | Kubernetes not enabled in Docker Desktop | Docker Desktop -> Settings -> Kubernetes -> Enable |
